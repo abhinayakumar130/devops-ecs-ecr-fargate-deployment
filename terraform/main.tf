@@ -2,6 +2,8 @@ provider "aws" {
   region = var.aws_region
 }
 
+data "aws_availability_zones" "available" {}
+
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
   tags = { Name = "ecs-vpc" }
@@ -15,8 +17,6 @@ resource "aws_subnet" "public_subnet" {
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   tags = { Name = "public-subnet-${count.index}" }
 }
-
-data "aws_availability_zones" "available" {}
 
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
@@ -43,10 +43,16 @@ resource "aws_ecs_cluster" "ecs_cluster" {
   name = "ecs-cluster"
 }
 
-# ECR repo                 # created manually
-# resource "aws_ecr_repository" "app_repo" {
-#  name = "ecs-app-repo"
-# }
+# ECR repo
+resource "aws_ecr_repository" "app_repo" {
+  name                 = "ecs-app-repo"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
 
 # IAM Role for ECS Task Execution
 resource "aws_iam_role" "ecs_task_execution_role" {
@@ -69,23 +75,19 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Lookup an existing ECR repository
-data "aws_ecr_repository" "app_repo" {
-  name = "ecs-app-repo"  # ✅ This should exactly match the repo name in AWS
-}
-
 # ECS Task Definition
 resource "aws_ecs_task_definition" "app_task" {
-  family                = "ecs-app-task"
+  family                   = "ecs-app-task"
   requires_compatibilities = ["FARGATE"]
-  network_mode          = "awsvpc"
-  cpu                   = "256"
-  memory                = "512"
+  network_mode             = "awsvpc"
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
 
   container_definitions = jsonencode([
     {
-      name      = "ecs-app-container"
-      image     = "${data.aws_ecr_repository.app_repo.repository_url}:latest"
+      name      = "app"
+      image     = "${aws_ecr_repository.app_repo.repository_url}:latest"
       essential = true
       portMappings = [
         {
@@ -128,10 +130,10 @@ resource "aws_lb" "app_alb" {
 }
 
 resource "aws_lb_target_group" "app_tg" {
-  name     = "app-tg"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
+  name        = "app-tg"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
   target_type = "ip"
 }
 
@@ -162,7 +164,7 @@ resource "aws_ecs_service" "app_service" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.app_tg.arn
-    container_name   = "app"
+    container_name   = "app"         # ❗ should match `name` in container_definitions
     container_port   = 80
   }
 
