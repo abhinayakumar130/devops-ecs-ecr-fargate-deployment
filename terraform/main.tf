@@ -43,10 +43,10 @@ resource "aws_ecs_cluster" "ecs_cluster" {
   name = "ecs-cluster"
 }
 
-# ECR repo
-resource "aws_ecr_repository" "app_repo" {
-  name = "ecs-app-repo"
-}
+# ECR repo                 # created manually
+# resource "aws_ecr_repository" "app_repo" {
+#  name = "ecs-app-repo"
+# }
 
 # IAM Role for ECS Task Execution
 resource "aws_iam_role" "ecs_task_execution_role" {
