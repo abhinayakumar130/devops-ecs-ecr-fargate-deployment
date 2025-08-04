@@ -43,15 +43,34 @@ resource "aws_ecs_cluster" "ecs_cluster" {
   name = "ecs-cluster"
 }
 
-# ECR repo
+# ECR Repository
 resource "aws_ecr_repository" "app_repo" {
   name                 = "ecs-app-repo"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
+}
 
-  lifecycle {
-    prevent_destroy = true
-  }
+# ECR Lifecycle Policy
+resource "aws_ecr_lifecycle_policy" "ecr_lifecycle" {
+  repository = aws_ecr_repository.app_repo.name
+
+  policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Expire untagged images older than 1 day"
+        selection = {
+          tagStatus     = "untagged"
+          countType     = "sinceImagePushed"
+          countUnit     = "days"
+          countNumber   = 1
+        }
+        action = {
+          type = "expire"
+        }
+      }
+    ]
+  })
 }
 
 # IAM Role for ECS Task Execution
