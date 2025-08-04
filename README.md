@@ -80,6 +80,7 @@ On every push to `main` branch or by manual trigger:
 ### 3️⃣ Access the App
 
  After deployment, Terraform will output the **ALB DNS name**:
+ 
   `alb_dns_name = "ecs-alb-xxxxx.us-east-1.elb.amazonaws.com`
   
   Open this URL in a browser to see your app running 🎉
