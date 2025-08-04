@@ -69,24 +69,30 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# Lookup an existing ECR repository
+data "aws_ecr_repository" "app_repo" {
+  name = "ecs-app-repo"  # ✅ This should exactly match the repo name in AWS
+}
+
 # ECS Task Definition
 resource "aws_ecs_task_definition" "app_task" {
-  family                   = "app-task"
+  family                = "ecs-app-task"
   requires_compatibilities = ["FARGATE"]
-  network_mode             = "awsvpc"
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  network_mode          = "awsvpc"
+  cpu                   = "256"
+  memory                = "512"
 
   container_definitions = jsonencode([
     {
-      name      = "app"
-      image     = "${aws_ecr_repository.app_repo.repository_url}:latest"
+      name      = "ecs-app-container"
+      image     = "${data.aws_ecr_repository.app_repo.repository_url}:latest"
       essential = true
-      portMappings = [{
-        containerPort = 80
-        protocol      = "tcp"
-      }]
+      portMappings = [
+        {
+          containerPort = 80
+          hostPort      = 80
+        }
+      ]
     }
   ])
 }
