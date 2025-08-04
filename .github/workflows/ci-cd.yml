@@ -19,19 +19,6 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
-    - name: 🔐 Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
-
-    - name: Build, tag, and push Docker image to ECR
-      env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ecs-app-repo  # Match Terraform name
-          IMAGE_TAG: latest
-      run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
     - name: 🧱 Setup Terraform
       uses: hashicorp/setup-terraform@v2
       with:
@@ -48,3 +35,15 @@ jobs:
     - name: 📤 Terraform Apply
       run: terraform apply -auto-approve
       working-directory: ./terraform
+    - name: 🔐 Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push Docker image to ECR
+      env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ecs-app-repo  # Match Terraform name
+          IMAGE_TAG: latest
+      run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
