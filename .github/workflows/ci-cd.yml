@@ -1,8 +1,7 @@
-name: CI/CD for ECS App
+name: Deploy ECS App
 
 on:
-  push:
-    branches: [ "main" ]  # Trigger on push to main
+  workflow_dispatch:  # Manual trigger from GitHub Actions tab
 
 jobs:
   deploy:
